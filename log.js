@@ -3,9 +3,9 @@ const log = message =>{
     console.log(date, message);
 }
 
-const error = message =>{
+const error = (message, obj = "") =>{
     const date = new Date();
-    console.error(date, message);
+    console.error(date, message, obj);
 }
 
 export {log, error};

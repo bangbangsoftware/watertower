@@ -6,7 +6,7 @@ import { SetupWebsocket } from "./store.ts";
 import { SetupDatabase } from "./db.ts";
 import { log } from "./log.js";
 
-const acceptWS = async (req: any, storeConnection: any) => {
+const acceptWS = async (req: any, storeConnection: Function) => {
   if (!acceptable) {
     return;
   }
@@ -18,7 +18,7 @@ const acceptWS = async (req: any, storeConnection: any) => {
       headers: req.headers,
     },
   );
-  console.log("socket connected");
+  console.log("socket connected ", storeConnection);
   storeConnection(connection);
 };
 
@@ -32,16 +32,18 @@ const eventLoop = async () => {
 
   for await (const req of server) {
     log(req.url);
+    const headers = new Headers();
+    headers.set("Content-Type","text/javascript");
     if (req.url == "/") {
       req.respond(
         { status: 200, body: await Deno.open("./public/index.html") },
       );
     } else if (req.url == "/log.js") {
-      req.respond({ status: 200, body: await Deno.open("./public/log.js") });
+      req.respond({ status: 200, headers, body: await Deno.open("./public/log.js") });
     } else if (req.url == "/index.js") {
-      req.respond({ status: 200, body: await Deno.open("./public/index.js") });
+      req.respond({ status: 200, headers,body: await Deno.open("./public/index.js") });
     } else if (req.url == "/ws") {
-      acceptWS(req, store);
+      acceptWS(req, storeConnection);
     }
   }
 };
