@@ -62,12 +62,9 @@ const SetupDatabase = async (): Promise<Store> => {
 
   const close = async () => await client.end();
 
-  return {
-    save,
-    load,
-    close,
-    currentID,
-  };
+  const funcs = { save, load, close, currentID };
+
+  return funcs;
 };
 
 export { SetupDatabase };

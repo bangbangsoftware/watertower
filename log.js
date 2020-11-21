@@ -1,11 +1,13 @@
-const log = message =>{
-    const date = new Date();
-    console.log(date, message);
-}
+const getDate = (date = new Date()) => {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDay()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+};
 
-const error = (message, obj = "") =>{
-    const date = new Date();
-    console.error(date, message, obj);
-}
+const log = (message) => {
+  console.log(getDate(), message);
+};
 
-export {log, error};
+const error = (message, obj = "") => {
+  console.error(getDate(), message, obj);
+};
+
+export { error, log };
