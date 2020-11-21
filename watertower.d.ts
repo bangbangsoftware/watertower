@@ -1,6 +1,8 @@
 interface Store {
-    save: Function,
-    close: Function  
-  }
+  save: Function;
+  load: Function;
+  currentID: Function;
+  close: Function;
+}
 
-  export type { Store}
+export type { Store };

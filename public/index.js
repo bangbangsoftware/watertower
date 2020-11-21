@@ -37,13 +37,16 @@ const listenerSetup = (incoming) =>
 
 const connect = async () => {
   const listener = listenerSetup((event) => {
-        const msg = JSON.parse(event.data);
-        const keys = Object.keys(msg);
-        keys.forEach(key =>{
-            log("Updating "+key+" to "+msg[key]);
-            localStorage.setItem(key, msg[key]);
-        });
+    const msg = JSON.parse(event.data);
+    if (msg.state == 409) {
+      error("Out of sync... overwriting, maybe should merge???");
+    }
+    const keys = Object.keys(msg.data);
+    keys.forEach((key) => {
+      log("Updating " + key + " to " + msg[key]);
+      localStorage.setItem(key, msg[key]);
     });
+  });
   ws.addEventListener("open", listener);
   const event = new Event("storage");
   document.dispatchEvent(event);
