@@ -3,40 +3,73 @@ import { Client } from "https://deno.land/x/postgres/mod.ts";
 import type { Store } from "./watertower.d.ts";
 import { error, log } from "./log.js";
 
-const connect = async () => {
+const connect = async (settings: any) => {
   const client = new Client({
-    user: "vscode",
-    password: "ssTGBJHNVlYY",
-    database: "watertower",
-    hostname: "localhost",
-    port: 5432,
+    user: settings.db.user,
+    password: settings.db.p,
+    database: settings.db.db,
+    hostname: settings.db.hostname,
+    port: settings.db.post,
   });
   await client.connect();
   return client;
 };
 
 const init = async (client: Client) => {
-  const create = await client.query(`CREATE TABLE IF NOT EXISTS store (
+  const createStore = await client.query(`CREATE TABLE IF NOT EXISTS store (
     id SERIAL PRIMARY KEY,
     timestamp timestamp default current_timestamp, 
     inserted_by VARCHAR (200) NOT NULL,
     data JSON NOT NULL)
 `);
-  log(create);
-  const result = await client.query("select * from store");
-  log(result.rows);
+  log(createStore);
+  const resultStore = await client.query("select * from store");
+  log(resultStore.rows);
+  const createUser = await client.query(`CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    userID VARCHAR (200) NOT NULL,
+    p TEXT NOT NULL)
+`);
+  const resultUsers = await client.query("select * from users");
+  log(resultUsers.rows);
 };
 
-const SetupDatabase = async (): Promise<Store> => {
-  const client = await connect();
-  await init(client);
+const loadSetup = (client: Client) =>
+  async (id: number) => {
+    const sql = `select data from store where id = ${id}`;
+    try {
+      const select = await client.query(sql);
+      return select.rows[0][0];
+    } catch (err) {
+      error(err);
+      error(sql);
+    }
+  };
 
-  const currentID = async () => {
+const validUserSetup = (client: Client) =>
+  async (id: string, p: string): Promise<boolean> => {
+    const sql = `SELECT id 
+    FROM users
+   WHERE email = ${id} 
+     AND password = crypt('${p}', p);`;
+    try {
+      const select = await client.query(sql);
+      return select.rows.length === 1;
+    } catch (err) {
+      error(err);
+      error(sql);
+    }
+    return false;
+  };
+
+const currentIDSetup = (client: Client) =>
+  async () => {
     const newID = await client.query("select max(id) from store");
     return newID.rows[0][0];
   };
 
-  const save = async (userID: string, toStore: any) => {
+const saveSetup = (client: Client, currentID: Function) =>
+  async (userID: string, toStore: any) => {
     const dataString = JSON.stringify(toStore);
     const sql =
       `insert into store (inserted_by,data) values ('${userID}','${toStore}')`;
@@ -49,20 +82,35 @@ const SetupDatabase = async (): Promise<Store> => {
       error(sql);
     }
   };
-  const load = async (id: number) => {
-    const sql = `select data from store where id = ${id}`;
+
+const saveUserSetup = (client: Client) =>
+  async (u: string, p: string) => {
+    const sql = `INSERT INTO users (email, password) VALUES (
+      'johndoe@mail.com',
+      crypt('${u}', gen_salt('${p}'))
+    )`;
     try {
-      const select = await client.query(sql);
-      return select.rows[0][0];
+      const insert = await client.query(sql);
+      log(u + " user inserted ");
     } catch (err) {
       error(err);
       error(sql);
     }
   };
 
+const SetupDatabase = async (settings: any): Promise<Store> => {
+  const client = await connect(settings);
+  await init(client);
+
+  const load = loadSetup(client);
+  const currentID = currentIDSetup(client);
+  const save = saveSetup(client, currentID);
+  const saveUser = saveUserSetup(client);
+  const validUser = validUserSetup(client);
+
   const close = async () => await client.end();
 
-  const funcs = { save, load, close, currentID };
+  const funcs = { save, saveUser, validUser, load, close, currentID };
 
   return funcs;
 };

@@ -5,6 +5,13 @@ import { SetupWebsocket } from "./listener.ts";
 import { SetupDatabase } from "./db.ts";
 import { log } from "./log.js";
 
+const getSettings = async () => {
+  const decoder = new TextDecoder("utf-8");
+  const setString = decoder.decode(await Deno.readFile("./.watertower.json"));
+  const settings = JSON.parse(setString);
+  return settings;
+};
+
 const acceptWS = async (req: any, storeConnection: Function) => {
   if (!acceptable) {
     return;
@@ -22,8 +29,9 @@ const acceptWS = async (req: any, storeConnection: Function) => {
 };
 
 const eventLoop = async () => {
-  const port = 3000;
-  const store = await SetupDatabase();
+  const settings = await getSettings();
+  const port = settings.port ? settings.port : 3000;
+  const store = await SetupDatabase(settings);
   const storeConnection = SetupWebsocket(store);
 
   const server = serve({ port });
