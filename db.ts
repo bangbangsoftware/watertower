@@ -15,23 +15,55 @@ const connect = async (settings: any) => {
   return client;
 };
 
-const init = async (client: Client) => {
+const init = async (
+  client: Client,
+  settings: any,
+  saveUser: Function,
+  validUser: Function,
+  adminUser: Function,
+) => {
   const createStore = await client.query(`CREATE TABLE IF NOT EXISTS store (
     id SERIAL PRIMARY KEY,
     timestamp timestamp default current_timestamp, 
     inserted_by VARCHAR (200) NOT NULL,
     data JSON NOT NULL)
 `);
-  log(createStore);
   const resultStore = await client.query("select * from store");
   log(resultStore.rows);
   const createUser = await client.query(`CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    userID VARCHAR (200) NOT NULL,
+    userID VARCHAR (200) NOT NULL UNIQUE,
     p TEXT NOT NULL)
 `);
   const resultUsers = await client.query("select * from users");
   log(resultUsers.rows);
+
+  await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
+
+  const createRoles = await client.query(`CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    userID INT,
+    ROLE TEXT NOT NULL,
+    CONSTRAINT "user_constraint" FOREIGN KEY (userID) REFERENCES users (id)
+    ON DELETE CASCADE
+  )
+`);
+  const resultRoles = await client.query("select * from roles");
+  log(resultRoles.rows);
+
+  if (!settings.admin || !settings.admin.id || !settings.admin.p) {
+    log("No admin in settings");
+    return;
+  }
+  const valid = await validUser(settings.admin.id, settings.admin.p);
+  const allGood = (!valid) ? false : await adminUser(valid);
+  if (allGood) {
+    log(" Admin exists " + settings.admin.id);
+    return;
+  }
+  await saveUser(settings.admin.id, settings.admin.p);
+  const userID = await validUser(settings.admin.id, settings.admin.p);
+  saveAdmin(client, userID);
 };
 
 const loadSetup = (client: Client) =>
@@ -47,14 +79,38 @@ const loadSetup = (client: Client) =>
   };
 
 const validUserSetup = (client: Client) =>
-  async (id: string, p: string): Promise<boolean> => {
+  async (id: string, p: string): Promise<boolean | number> => {
     const sql = `SELECT id 
     FROM users
-   WHERE email = ${id} 
-     AND password = crypt('${p}', p);`;
+   WHERE userID = '${id}' 
+     AND p = crypt('${p}', p);`;
     try {
       const select = await client.query(sql);
-      return select.rows.length === 1;
+      const valid = select.rowCount === 1;
+      if (!valid) {
+        return false;
+      }
+      return select.rows[0][0];
+    } catch (err) {
+      error(err);
+      error(sql);
+    }
+    return false;
+  };
+
+const adminUserSetup = (client: Client) =>
+  async (id: string): Promise<boolean | number> => {
+    const sql = `SELECT id 
+    FROM roles
+   WHERE userID = '${id}' 
+     AND role = 'admin'`;
+    try {
+      const select = await client.query(sql);
+      const valid = select.rowCount === 1;
+      if (!valid) {
+        return false;
+      }
+      return select.rows[0][0];
     } catch (err) {
       error(err);
       error(sql);
@@ -83,11 +139,22 @@ const saveSetup = (client: Client, currentID: Function) =>
     }
   };
 
+const saveAdmin = async (client: Client, userID: string) => {
+  const sql = `insert into roles (userID,role) values ('${userID}','admin')`;
+  try {
+    const insert = await client.query(sql);
+    log(userID + " has admin roll");
+  } catch (err) {
+    error(err);
+    error(sql);
+  }
+};
+
 const saveUserSetup = (client: Client) =>
   async (u: string, p: string) => {
-    const sql = `INSERT INTO users (email, password) VALUES (
-      'johndoe@mail.com',
-      crypt('${u}', gen_salt('${p}'))
+    const sql = `INSERT INTO users (userID, p) VALUES (
+      '${u}',
+      crypt('${p}', gen_salt('bf'))
     )`;
     try {
       const insert = await client.query(sql);
@@ -100,17 +167,27 @@ const saveUserSetup = (client: Client) =>
 
 const SetupDatabase = async (settings: any): Promise<Store> => {
   const client = await connect(settings);
-  await init(client);
 
   const load = loadSetup(client);
   const currentID = currentIDSetup(client);
   const save = saveSetup(client, currentID);
   const saveUser = saveUserSetup(client);
   const validUser = validUserSetup(client);
+  const adminUser = adminUserSetup(client);
 
   const close = async () => await client.end();
 
-  const funcs = { save, saveUser, validUser, load, close, currentID };
+  await init(client, settings, saveUser, validUser, adminUser);
+
+  const funcs = {
+    save,
+    saveUser,
+    adminUser,
+    validUser,
+    load,
+    close,
+    currentID,
+  };
 
   return funcs;
 };

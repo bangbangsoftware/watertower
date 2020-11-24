@@ -3,6 +3,9 @@ interface Store {
   load: Function;
   currentID: Function;
   close: Function;
+  saveUser: Function;
+  adminUser: Function;
+  validUser: Function;
 }
 
 export type { Store };
