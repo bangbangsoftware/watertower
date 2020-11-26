@@ -8,7 +8,11 @@ const CLOSED = 3;
 
 const send = () => {
   log("Sending storage");
-  ws.send(JSON.stringify(window.localStorage));
+  const data = {
+    "action": "update",
+    "data": window.localStorage,
+  };
+  ws.send(JSON.stringify(data));
 };
 
 document.addEventListener("storage", function (e) {

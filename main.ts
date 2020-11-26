@@ -24,7 +24,7 @@ const acceptWS = async (req: any, storeConnection: Function) => {
       headers: req.headers,
     },
   );
-  console.log("socket connected ", storeConnection);
+  log("socket connected ");
   storeConnection(connection);
 };
 
