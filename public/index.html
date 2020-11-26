@@ -1,19 +1,19 @@
-
-
-
-
-
-
 <html>
 
 <head></head>
 
 <body>
-Hello
-
     <script type="module">
-        import connect from './index.js';
+        import { connect, login, store } from './index.js';
         connect();
-     </script>
+        document.getElementById("submit").addEventListener("click", login);
+        document.getElementById("store").addEventListener("click", store);
+    </script>
+    <input id="user" placeholder="User ID"></input>
+    <input id="p" type="password" placeholder="Password"></input>
+    <button id="submit">Submit</button>
+    <button id="store">Store</button>
+
 </body>
+
 </html>

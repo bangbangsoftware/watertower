@@ -32,6 +32,18 @@ document.addEventListener("storage", function (e) {
   ws.addEventListener("open", waiting);
 });
 
+const login = () => {
+  const id = document.getElementById("user").value;
+  const p = document.getElementById("p").value;
+  const data = JSON.stringify({ action: "logon", data: { id, p } });
+  ws.send(data);
+};
+
+const store = () => {
+  const event = new Event("storage");
+  document.dispatchEvent(event);
+};
+
 const listenerSetup = (incoming) =>
   async ({ target }) => {
     const ws = target;
@@ -45,6 +57,14 @@ const connect = async () => {
     if (msg.state == 409) {
       error("Out of sync... overwriting, maybe should merge???");
     }
+    if (msg.state == 403) {
+      error("Need to log in");
+      return;
+    }
+    if (msg.action != "update") {
+      error("Unknown action " + msg.action);
+      return;
+    }
     const keys = Object.keys(msg.data);
     keys.forEach((key) => {
       log("Updating " + key + " to " + msg[key]);
@@ -52,8 +72,6 @@ const connect = async () => {
     });
   });
   ws.addEventListener("open", listener);
-  const event = new Event("storage");
-  document.dispatchEvent(event);
 };
 
-export default connect;
+export { connect, login, store };

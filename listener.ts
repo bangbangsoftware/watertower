@@ -28,17 +28,34 @@ interface Reply {
 
 const socks = new Map<string, Wsc>();
 
-const sendReply = (id: string, state: number, reply: string, data: any) => {
+const sendReply = (id: string, state: number, action: string, data: any) => {
   const wsc = socks.get(id);
   if (!wsc) {
     error(id + " is unknown, cannot reply!??");
     return;
   }
-  const saveData = { state, data, reply };
+  const saveData = { state, data, reply: action };
   wsc.ws.send(JSON.stringify(saveData));
 };
 
-const logIn = (id: string, data: any): boolean => {
+const logIn = async (id: string, data: any, store: Store): Promise<boolean> => {
+  console.log(data);
+  const wsc = socks.get(id);
+  if (!wsc) {
+    sendReply(id, 403, "update", null);
+    error("This socket " + id + " not stored");
+    // reset ???
+    return false;
+  }
+  const valid = await store.validUser(data.id, data.p);
+  const allGood = (!valid) ? false : await store.adminUser(valid);
+  if (allGood) {
+    log(" Admin exists " + id);
+    wsc.canWrite = true;
+    socks.set(id, wsc);
+    sendReply(id, 200, "login", null);
+    return true;
+  }
   sendReply(id, 401, "login", null);
   return false;
 };
@@ -95,16 +112,20 @@ const processEvent = async (id: string, ev: any, store: Store) => {
     error("bad event", JSON.stringify(ev));
     return;
   }
-
-  const message: Message = JSON.parse(ev);
-  log("Request to " + message.action);
-  if (message.action == "logon") {
-    logIn(id, message.data);
-  } else if (message.action == "update") {
-    update(id, message.data, store);
-  } else {
-    error("Request not understood");
-    sendReply(id, 400, "Cannot understand Request", ev);
+  try {
+    const message: Message = JSON.parse(ev);
+    log("Request to " + message.action);
+    if (message.action == "logon") {
+      logIn(id, message.data, store);
+    } else if (message.action == "update") {
+      update(id, message.data, store);
+    } else {
+      error("Request not understood");
+      sendReply(id, 400, "Cannot understand Request", ev);
+    }
+  } catch (err) {
+    error("Cannot process message", err);
+    error("Cannot process message", ev);
   }
 };
 
