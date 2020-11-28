@@ -129,11 +129,23 @@ const create = (key) => {
   input.setAttribute("type", "text");
   input.setAttribute("id", key);
   input.setAttribute("placeholder", key);
-  data.appendChild(input);
-  input.addEventListener("change", (el) => {
+  input.addEventListener("change", (event) => {
+    const el = event.target;
     window.localStorage.setItem(el.id, el.value);
     store();
   });
+  const del = document.createElement("BUTTON");
+  del.innerHTML = "X";
+  del.setAttribute("id", "del-" + key);
+  del.addEventListener("click", (event) => {
+    const el = event.target;
+    window.localStorage.removeItem(key);
+    data.removeChild(input);
+    data.removeChild(del);
+  });
+  data.appendChild(input);
+  data.appendChild(del);
+
   return input;
 };
 

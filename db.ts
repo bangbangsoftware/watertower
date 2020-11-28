@@ -130,7 +130,7 @@ const saveSetup = (client: Client, currentID: Function) =>
   async (userID: string, toStore: any) => {
     const dataString = JSON.stringify(toStore);
     const sql =
-      `insert into store (inserted_by,data) values ('${userID}','${toStore}')`;
+      `insert into store (inserted_by,data) values ('${userID}','${dataString}')`;
     try {
       const insert = await client.query(sql);
       log(userID + " inserted " + dataString);

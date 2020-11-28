@@ -45,6 +45,7 @@ const logIn = async (id: string, data: any, store: Store): Promise<boolean> => {
   console.log(data);
   const wsc = socks.get(id);
   if (!wsc) {
+    error("No wsc");
     const reply = {
       state: 403,
       message: "This socket " + id + " not stored",
@@ -112,8 +113,9 @@ const inSequence = async (
   return false;
 };
 
-const canWrite = (id: string, wsc: Wsc | undefined): boolean => {
+const hasWritePermissions = (id: string, wsc: Wsc | undefined): boolean => {
   if (!wsc) {
+    error("No wsc");
     const reply = {
       state: 403,
       message: "This socket " + id + " is not stored, reconnect",
@@ -121,10 +123,11 @@ const canWrite = (id: string, wsc: Wsc | undefined): boolean => {
       data: null,
     };
     sendReply(id, reply, true);
-    return true;
+    return false;
   }
 
   if (!wsc.canWrite) {
+    error("wsc can write is false");
     const reply = {
       state: 403,
       message: "This socket " + id + " is not writable",
@@ -132,20 +135,22 @@ const canWrite = (id: string, wsc: Wsc | undefined): boolean => {
       data: null,
     };
     sendReply(id, reply, true);
-    return true;
+    return false;
   }
 
-  return false;
+  return true;
 };
 
 const update = async (id: string, data: any, store: Store) => {
   const wsc = socks.get(id);
-  const cantWrite = !canWrite(id, wsc);
-  if (cantWrite) {
+  const canWrite = hasWritePermissions(id, wsc);
+  log("Can write:" + canWrite);
+  if (!canWrite) {
     return;
   }
 
   const wrongSequence = await outOfSequence(id, data.__UUID, store);
+  log("Wrong Sequence :" + wrongSequence);
   if (wrongSequence) {
     return;
   }
