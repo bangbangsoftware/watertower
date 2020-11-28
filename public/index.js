@@ -54,13 +54,17 @@ const store = () => {
   document.dispatchEvent(event);
 };
 
-const load = (id = null) => {
-  const data = {
+const load = (uuid = null) => {
+  console.log("sdfdfgdfg", uuid);
+  const data = uuid ? { uuid } : null;
+  const message = {
     "action": "load",
-    "data": { id },
+    data,
   };
-  const event = new CustomEvent("storage", { detail: data });
-  document.dispatchEvent(event);
+  log("loading");
+  const sendingData = JSON.stringify(message);
+  log(sendingData);
+  ws.send(sendingData);
 };
 
 const listenerSetup = (incoming) =>
@@ -103,8 +107,28 @@ const connect = async () => {
       localStorage.setItem(key, escape(data[key]));
       updateDom(key, data[key]);
     });
+    timeline(data.__UUID);
   });
   ws.addEventListener("open", listener);
+};
+
+const timeline = (maxString) => {
+  const max = parseInt(maxString);
+  const data = document.getElementById("data");
+  const oldline = document.getElementById("timeline");
+  const timelineDiv = oldline ? oldline : document.createElement("DIV");
+  timelineDiv.innerHTML = "";
+  timelineDiv.setAttribute("id", "timeline");
+  for (let x = 0; x < max; x++) {
+    const time = document.createElement("BUTTON");
+    time.innerHTML = "" + x;
+    time.setAttribute("id", "time-" + x);
+    time.addEventListener("click", (event) => {
+      load(x);
+    });
+    timelineDiv.appendChild(time);
+  }
+  data.appendChild(timelineDiv);
 };
 
 const escape = (value) => {

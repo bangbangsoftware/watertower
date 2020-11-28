@@ -8,7 +8,7 @@
         connect();
         document.getElementById("submit").addEventListener("click", login);
         document.getElementById("store").addEventListener("click", store);
-        document.getElementById("load").addEventListener("click", load);
+        document.getElementById("load").addEventListener("click", e => load());
     </script>
     <button id="load">Load</button>
     <input id="user" placeholder="User ID"></input>
