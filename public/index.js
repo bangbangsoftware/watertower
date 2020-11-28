@@ -6,12 +6,21 @@ const OPEN = 1;
 const CLOSING = 2;
 const CLOSED = 3;
 
-const send = (data = {
+const send = (message = {
   "action": "update",
   "data": window.localStorage,
 }) => {
-  log("Sending storage");
-  ws.send(JSON.stringify(data));
+  log("Sending");
+  const data = message.data;
+  if (data) {
+    const keys = Object.keys(data);
+    keys.forEach((key) => {
+      data[key] = escape(data[key]);
+    });
+  }
+  const sendingData = JSON.stringify(message);
+  log(sendingData);
+  ws.send(sendingData);
 };
 
 document.addEventListener("storage", function (e) {
@@ -81,10 +90,14 @@ const connect = async () => {
       return;
     }
     const data = msg.data;
+    if (!data) {
+      error("no data");
+      return;
+    }
     const keys = Object.keys(data);
     keys.forEach((key) => {
       log("Updating " + key + " to " + data[key]);
-      localStorage.setItem(key, data[key]);
+      localStorage.setItem(key, escape(data[key]));
       updateDom(key, data[key]);
     });
   });
@@ -117,6 +130,10 @@ const create = (key) => {
   input.setAttribute("id", key);
   input.setAttribute("placeholder", key);
   data.appendChild(input);
+  input.addEventListener("change", (el) => {
+    window.localStorage.setItem(el.id, el.value);
+    store();
+  });
   return input;
 };
 
