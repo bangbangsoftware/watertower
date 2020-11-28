@@ -71,7 +71,9 @@ const loadSetup = (client: Client) =>
     const sql = `select data from store where id = ${id}`;
     try {
       const select = await client.query(sql);
-      return select.rows[0][0];
+      const data = select.rows[0][0];
+      data.__UUID = id;
+      return data;
     } catch (err) {
       error(err);
       error(sql);

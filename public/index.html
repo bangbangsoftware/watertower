@@ -4,15 +4,17 @@
 
 <body>
     <script type="module">
-        import { connect, login, store } from './index.js';
+        import { connect, login, store, load } from './index.js';
         connect();
         document.getElementById("submit").addEventListener("click", login);
         document.getElementById("store").addEventListener("click", store);
+        document.getElementById("load").addEventListener("click", load);
     </script>
     <input id="user" placeholder="User ID"></input>
     <input id="p" type="password" placeholder="Password"></input>
     <button id="submit">Submit</button>
     <button id="store">Store</button>
+    <button id="load">Load</button>
 
 </body>
 
