@@ -85,7 +85,10 @@ const connect = async () => {
       return;
     }
 
-    if (msg.action != "update" && msg.action != "load") {
+    if (
+      msg.action != "update" && msg.action != "load" &&
+      msg.action != "broadcast"
+    ) {
       log("Doing nothing with action " + msg.action);
       return;
     }
@@ -134,6 +137,9 @@ const create = (key) => {
     window.localStorage.setItem(el.id, el.value);
     store();
   });
+  const lab = document.createElement("LABEL");
+  lab.innerHTML = key + ": ";
+  lab.setAttribute("id", "lab=" + key);
   const del = document.createElement("BUTTON");
   del.innerHTML = "X";
   del.setAttribute("id", "del-" + key);
@@ -142,7 +148,9 @@ const create = (key) => {
     window.localStorage.removeItem(key);
     data.removeChild(input);
     data.removeChild(del);
+    data.removeChild(lab);
   });
+  data.appendChild(lab);
   data.appendChild(input);
   data.appendChild(del);
 

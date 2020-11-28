@@ -86,7 +86,8 @@ const outOfSequence = async (
   uuid: string,
   store: Store,
 ): Promise<boolean> => {
-  return !await inSequence(id, uuid, store);
+  const sequence = await inSequence(id, uuid, store);
+  return !sequence;
 };
 
 const inSequence = async (
@@ -162,7 +163,7 @@ const update = async (id: string, data: any, store: Store) => {
     state: 200,
     message: "Updated",
     action: "update",
-    data: null,
+    data,
   };
   sendReply(id, reply, true);
 
