@@ -69,21 +69,55 @@ const connect = async () => {
       error("Out of sync... overwriting, maybe should merge???");
       load();
     }
-    if (msg.state == 403) {
-      error("Need to log in");
+    const err = document.getElementById("message");
+    err.innerHTML = "<b>" + msg.message + "</b";
+
+    if (msg.state != 200) {
       return;
     }
-    if (msg.action != "update") {
+
+    if (msg.action != "update" && msg.action != "load") {
       log("Doing nothing with action " + msg.action);
       return;
     }
-    const keys = Object.keys(msg.data);
+    const data = msg.data;
+    const keys = Object.keys(data);
     keys.forEach((key) => {
-      log("Updating " + key + " to " + msg[key]);
-      localStorage.setItem(key, msg[key]);
+      log("Updating " + key + " to " + data[key]);
+      localStorage.setItem(key, data[key]);
+      updateDom(key, data[key]);
     });
   });
   ws.addEventListener("open", listener);
+};
+
+const escape = (value) => {
+  if (!value) {
+    return "";
+  }
+  if (value == "undefined") {
+    return "";
+  }
+  if (value == "null") {
+    return "";
+  }
+  return value;
+};
+
+const updateDom = (key, value) => {
+  const element = document.getElementById(key);
+  const input = (element) ? element : create(key, value);
+  input.value = escape(value);
+};
+
+const create = (key) => {
+  const data = document.getElementById("data");
+  const input = document.createElement("INPUT");
+  input.setAttribute("type", "text");
+  input.setAttribute("id", key);
+  input.setAttribute("placeholder", key);
+  data.appendChild(input);
+  return input;
 };
 
 export { connect, load, login, store };
