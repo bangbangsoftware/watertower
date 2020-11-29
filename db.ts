@@ -21,14 +21,17 @@ const init = async (
   saveUser: Function,
   validUser: Function,
   adminUser: Function,
+  tablename: String,
 ) => {
-  const createStore = await client.query(`CREATE TABLE IF NOT EXISTS store (
+  const createStore = await client.query(
+    `CREATE TABLE IF NOT EXISTS ${tablename} (
     id SERIAL PRIMARY KEY,
     timestamp timestamp default current_timestamp, 
     inserted_by VARCHAR (200) NOT NULL,
     data JSON NOT NULL)
-`);
-  const resultStore = await client.query("select * from store");
+`,
+  );
+  const resultStore = await client.query(`select * from ${tablename}`);
   log(resultStore.rows);
   const createUser = await client.query(`CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -66,9 +69,9 @@ const init = async (
   saveAdmin(client, userID);
 };
 
-const loadSetup = (client: Client) =>
+const loadSetup = (client: Client, tablename: String) =>
   async (id: number) => {
-    const sql = `select data from store where id = ${id}`;
+    const sql = `select data from ${tablename} where id = ${id}`;
     try {
       const select = await client.query(sql);
       const data = select.rows[0][0];
@@ -120,17 +123,17 @@ const adminUserSetup = (client: Client) =>
     return false;
   };
 
-const currentIDSetup = (client: Client) =>
+const currentIDSetup = (client: Client, tablename: String) =>
   async () => {
-    const newID = await client.query("select max(id) from store");
+    const newID = await client.query(`select max(id) from ${tablename}`);
     return newID.rows[0][0];
   };
 
-const saveSetup = (client: Client, currentID: Function) =>
+const saveSetup = (client: Client, currentID: Function, tablename = "store") =>
   async (userID: string, toStore: any) => {
     const dataString = JSON.stringify(toStore);
     const sql =
-      `insert into store (inserted_by,data) values ('${userID}','${dataString}')`;
+      `insert into ${tablename} (inserted_by,data) values ('${userID}','${dataString}')`;
     try {
       const insert = await client.query(sql);
       log(userID + " inserted " + dataString);
@@ -170,8 +173,10 @@ const saveUserSetup = (client: Client) =>
 const SetupDatabase = async (settings: any): Promise<Store> => {
   const client = await connect(settings);
 
-  const load = loadSetup(client);
-  const currentID = currentIDSetup(client);
+  const tablename = settings.table ? settings.table : "store";
+
+  const load = loadSetup(client, tablename);
+  const currentID = currentIDSetup(client, tablename);
   const save = saveSetup(client, currentID);
   const saveUser = saveUserSetup(client);
   const validUser = validUserSetup(client);
@@ -179,7 +184,7 @@ const SetupDatabase = async (settings: any): Promise<Store> => {
 
   const close = async () => await client.end();
 
-  await init(client, settings, saveUser, validUser, adminUser);
+  await init(client, settings, saveUser, validUser, adminUser, tablename);
 
   const funcs = {
     save,
