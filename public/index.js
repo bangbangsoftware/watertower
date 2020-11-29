@@ -101,6 +101,7 @@ const connect = async () => {
       error("no data");
       return;
     }
+    localStorage.clear();
     const keys = Object.keys(data);
     keys.forEach((key) => {
       log("Updating " + key + " to " + data[key]);
@@ -112,8 +113,12 @@ const connect = async () => {
   ws.addEventListener("open", listener);
 };
 
+let max = 0;
 const timeline = (maxString) => {
-  const max = parseInt(maxString);
+  const newMax = parseInt(maxString);
+  if (newMax > max) {
+    max = newMax;
+  }
   const data = document.getElementById("data");
   const oldline = document.getElementById("timeline");
   const timelineDiv = oldline ? oldline : document.createElement("DIV");
