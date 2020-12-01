@@ -41,18 +41,11 @@ const sendReply = (id: string, reply: Reply, logError = false) => {
   wsc.ws.send(JSON.stringify(reply));
 };
 
-const logIn = async (id: string, data: any, store: Store): Promise<boolean> => {
-  console.log(data);
+const logon = async (id: string, data: any, store: Store): Promise<boolean> => {
+  log(data);
   const wsc = socks.get(id);
   if (!wsc) {
-    error("No wsc");
-    const reply = {
-      state: 403,
-      message: "This socket " + id + " not stored",
-      action: "update",
-      data: null,
-    };
-    sendReply(id, reply, true);
+    error(id + " is unknown, logon");
     // reset ???
     return false;
   }
@@ -65,7 +58,7 @@ const logIn = async (id: string, data: any, store: Store): Promise<boolean> => {
     const reply = {
       state: 200,
       message: data.id + " is now logged in",
-      action: "login",
+      action: "logon",
       data: null,
     };
     sendReply(id, reply);
@@ -73,8 +66,8 @@ const logIn = async (id: string, data: any, store: Store): Promise<boolean> => {
   }
   const reply = {
     state: 401,
-    message: "Bad Login details",
-    action: "login",
+    message: "Bad logon details",
+    action: "logon",
     data: null,
   };
   sendReply(id, reply);
@@ -116,34 +109,30 @@ const inSequence = async (
 
 const hasWritePermissions = (id: string, wsc: Wsc | undefined): boolean => {
   if (!wsc) {
-    error("No wsc");
-    const reply = {
-      state: 403,
-      message: "This socket " + id + " is not stored, reconnect",
-      action: "update",
-      data: null,
-    };
-    sendReply(id, reply, true);
+    error(id + " is unknown to check permissions");
     return false;
   }
 
-  if (!wsc.canWrite) {
-    error("wsc can write is false");
-    const reply = {
-      state: 403,
-      message: "This socket " + id + " is not writable",
-      action: "update",
-      data: null,
-    };
-    sendReply(id, reply, true);
-    return false;
+  if (wsc.canWrite) {
+    return true;
   }
-
-  return true;
+  error("wsc can write is false");
+  const reply = {
+    state: 403,
+    message: "This socket " + id + " is not writable",
+    action: "update",
+    data: null,
+  };
+  sendReply(id, reply, true);
+  return false;
 };
 
 const update = async (id: string, data: any, store: Store) => {
   const wsc = socks.get(id);
+  if (!wsc) {
+    error(id + " is unknown to update");
+    return;
+  }
   const canWrite = hasWritePermissions(id, wsc);
   log("Can write:" + canWrite);
   if (!canWrite) {
@@ -193,10 +182,15 @@ const load = async (id: string, recievedData: any, store: Store) => {
     : recievedData.uuid;
   const idToLoad = (anID == null) ? await store.currentID() : anID;
   const data = await store.load(idToLoad);
+  const state = data ? 200 : 404;
+  const message = data
+    ? "Data for " + idToLoad
+    : "Cannot find data with uuid " + idToLoad;
+  const action = "load";
   const reply = {
-    state: 200,
-    message: "Data for " + idToLoad,
-    action: "load",
+    state,
+    message,
+    action,
     data,
   };
   sendReply(id, reply);
@@ -218,7 +212,7 @@ const processEvent = async (id: string, ev: any, store: Store) => {
     const message: Message = JSON.parse(ev);
     log("Request to " + message.action);
     if (message.action == "logon") {
-      logIn(id, message.data, store);
+      logon(id, message.data, store);
     } else if (message.action == "load") {
       load(id, message.data, store);
     } else if (message.action == "update") {

@@ -55,7 +55,6 @@ const store = () => {
 };
 
 const load = (uuid = null) => {
-  console.log("sdfdfgdfg", uuid);
   const data = uuid ? { uuid } : null;
   const message = {
     "action": "load",
