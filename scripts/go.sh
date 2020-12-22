@@ -2,6 +2,7 @@
 test=`pg_isready`
 if [[ $test != *"accepting connections"* ]];
   then 
+    echo 'pg starting'
     sudo service postgresql start
     # Adjust PostgreSQL configuration so that remote connections to the
     # database are possible.
@@ -15,11 +16,12 @@ if [[ $test != *"accepting connections"* ]];
         echo '$(date) - waiting for database to start'
         sleep 10 
     done
-    sudo su postgres
-    psql < init.sql 
-    sudo su vscode
+    sudo runuser -l postgres -c 'psql < /workspaces/watertower/scripts/init.sql'
+    #sudo su postgres
+    #psql < init.sql 
+    #sudo su vscode
 fi 
 
-echo 'pg is going already'
+echo "pg is going already - $test"
 
 deno run --allow-net --allow-read main.ts

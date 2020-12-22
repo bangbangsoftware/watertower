@@ -15,5 +15,6 @@ ENV POSTGRES_DB watertower
 RUN apt-get -y install postgresql curl
 
 RUN curl -fsSL https://deno.land/x/install/install.sh | sh && mv /root/.deno/bin/deno /bin/deno
+#RUN ./go.sh
 #USER postgres
 #RUN psql < init.sql

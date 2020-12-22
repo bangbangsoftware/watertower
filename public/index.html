@@ -1,23 +1,48 @@
 <html>
 
-<head></head>
+<head>
+  <link rel="stylesheet" type="text/css" href="index.css" />
+  <title>Footswell</title>
+  <div showhide="connected" class="hide watercontrol" id="watercourse">
+    <input type="text" id="u" name="u" placeholder="Username">
+    <input type="password" id="p" name="password" placeholder="password">
+    <button click="login" class="login">Log in</button>
+  </div>
+</head>
 
-<body>
-    <script type="module">
-        import { connect, login, store, load } from './index.js';
-        connect();
-        document.getElementById("submit").addEventListener("click", login);
-        document.getElementById("store").addEventListener("click", store);
-        document.getElementById("load").addEventListener("click", e => load());
-    </script>
-    <button id="load">Load</button>
-    <input id="user" placeholder="User ID"></input>
-    <input id="p" type="password" placeholder="Password"></input>
-    <button id="submit">Log in</button>
-    <label id="message"></label>
-    <div id="data"></div>
-    <button id="store">Store</button>
+<body class="fade-in">
+  <main>
+    <header>
+      <h1>F O O T S W E L L</h1>
+    </header>
+    <section>
+      <article id="components">
 
+        <button class="place action" toggle="HOME,AWAY" id="place-toggle" name="place">HOME</button>
+
+        <team-names id="teamNames" mode="edit"></team-names>
+
+        <nav class="nav">
+          <button class="action edit" click="toggleEdit">Edit</button>
+          <button click="publish" class="action">Publish</button>
+          <button click="kickoff" class="action">Kick Off</button>
+        </nav>
+
+        <formation-edit mode="edit"></formation-edit>
+
+        <events-list></events-list>
+
+
+    </section>
+  </main>
 </body>
+<script type="module" src="./index.js"></script>
+<script type="module">
+  import { go } from "./dist/binder.js";
+  go();
+
+  import { reset } from "./index.js";
+  reset();
+</script>
 
 </html>

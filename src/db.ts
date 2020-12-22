@@ -1,7 +1,7 @@
 import { Client } from "https://deno.land/x/postgres/mod.ts";
 
 import type { Store } from "./watertower.d.ts";
-import { error, log } from "./log.js";
+import { error, log } from "../log.js";
 
 const connect = async (settings: any) => {
   const client = new Client({

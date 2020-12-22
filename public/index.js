@@ -1,188 +1,242 @@
-import { error, log } from "./log.js";
+import {
+  addClickFunction,
+  getByName,
+  setByName,
+  tools,
+  watertowerConnect,
+} from "./dist/binder.js";
+import {
+  addRow,
+  addSort,
+  clearTable,
+  toggleClass,
+} from "./dist/plugins/tablePlugin.js";
 
-const ws = new WebSocket("ws://localhost:3000/ws");
-const CONNECTING = 0;
-const OPEN = 1;
-const CLOSING = 2;
-const CLOSED = 3;
+import { showHideSwap } from "./dist/plugins/showhidePlugin.js";
+import { positionIds } from "./posrow.js";
+import { benchIds } from "./posbench.js";
+import { goalieIds } from "./posgoal.js";
+import "./formationedit.js";
+import "./teamnames.js";
+import "./eventslist.js";
 
-const send = (message = {
-  "action": "update",
-  "data": window.localStorage,
-}) => {
-  log("Sending");
-  const data = message.data;
-  if (data) {
-    const keys = Object.keys(data);
-    keys.forEach((key) => {
-      data[key] = escape(data[key]);
-    });
-  }
-  const sendingData = JSON.stringify(message);
-  log(sendingData);
-  ws.send(sendingData);
-};
+let mode = "edit"; // two modes 'edit' or 'display'
 
-document.addEventListener("storage", function (e) {
-  const data = e.detail;
-  if (ws.readyState == OPEN) {
-    send(data);
-    return;
-  }
-  const state = ws.readyState == CLOSED ? "closed" : "closing";
-  error("Websocket is " + state);
-  const waiting = () => {
-    send(data);
-    ws.removeEventListener("open", waiting);
-  };
-  ws.addEventListener("open", waiting);
+// Register a function for toggleEdit to use with "click" in mark up
+addClickFunction("toggleEdit", (e) => {
+  const editNow = mode === "display"; // toggle mode
+
+  toggleHide("namesInputMode");
+  toggleHide("namesDisplayMode");
+  changeClass(e.target.id, editNow); // Button press display
+
+  positionIds.forEach((id) => toggleHide(id));
+  benchIds.forEach((id) => toggleHide(id));
+  goalieIds.forEach((id) => toggleHide(id));
+
+  mode = editNow ? "edit" : "display"; // set new mode
 });
 
-const login = () => {
-  const id = document.getElementById("user").value;
-  const p = document.getElementById("p").value;
-  const data = JSON.stringify({ action: "logon", data: { id, p } });
-  ws.send(data);
+const toggleHide = (id, className = "hide") => {
+  const element = document.getElementById(id);
+  const hiding = element.classList.contains(className);
+  if (hiding) {
+    element.classList.remove(className);
+  } else {
+    element.classList.add(className);
+  }
 };
 
-const store = () => {
-  const data = {
-    "action": "update",
-    "data": window.localStorage,
-  };
-  const event = new CustomEvent("storage", { detail: data });
-  document.dispatchEvent(event);
+//helper function for changing class
+const changeClass = (id, show, className = "edit") => {
+  const element = document.getElementById(id);
+  if (show) {
+    element.classList.remove(className);
+  } else {
+    element.classList.add(className);
+  }
 };
 
-const load = (uuid = null) => {
-  const data = uuid ? { uuid } : null;
-  const message = {
-    "action": "load",
-    data,
-  };
-  log("loading");
-  const sendingData = JSON.stringify(message);
-  log(sendingData);
-  ws.send(sendingData);
+const zeroPad = (n) => (n > 9 ? n : "0" + n);
+
+const formation = (prefix = "pos-") => {
+  let list = "";
+  for (let x = 1; x < 21; x++) {
+    const value = getByName(prefix + x);
+    const display = list.length == 0 ? value : ". " + value;
+    const displayValue = value ? display : "";
+    list = list + displayValue;
+  }
+  return list;
 };
 
-const listenerSetup = (incoming) =>
-  async ({ target }) => {
-    const ws = target;
-    log("websocket open");
-    ws.addEventListener("message", incoming);
+const bench = () => {
+  const value = formation("pos-bench-");
+  return value ? ". On the Bench: " + value : "";
+};
+
+const goalie = () => {
+  const value = getByName("pos-goal");
+  return value ? ". Goalie: " + value : "";
+};
+
+const location = () => {
+  const place = getByName("place");
+  return (" (" + place).toLowerCase() + ").";
+};
+
+addClickFunction("publish", () => {
+  publish("Formation: " + formation() + goalie() + bench() + location());
+});
+
+const publish = (details) => {
+  const date = new Date();
+  const hh = zeroPad(date.getHours());
+  const mm = zeroPad(date.getMinutes());
+  const ss = zeroPad(date.getSeconds());
+  const ent = {
+    ok: ">",
+    time: hh + ":" + mm + ":" + ss,
+    details,
   };
+  addRow("events", ent);
+};
 
-const connect = async () => {
-  const listener = listenerSetup((event) => {
-    const msg = JSON.parse(event.data);
-    log(msg);
-    if (msg.state == 409) {
-      error("Out of sync... overwriting, maybe should merge???");
-      load();
-    }
-    const err = document.getElementById("message");
-    err.innerHTML = "<b>" + msg.message + "</b";
+const getRow = (e) => {
+  const clicked = e.target;
+  return clicked.getAttribute("row");
+};
 
-    if (msg.state != 200) {
-      return;
-    }
+addClickFunction("kickoff", (e) => {
+  setByName("lastUpdate", new Date().getTime()); // reset for pause
+  window.location.href = "kickoff.html";
+});
 
-    if (
-      msg.action != "update" && msg.action != "load" &&
-      msg.action != "broadcast"
-    ) {
-      log("Doing nothing with action " + msg.action);
-      return;
-    }
-    const data = msg.data;
-    if (!data) {
-      error("no data");
-      return;
-    }
-    localStorage.clear();
-    const keys = Object.keys(data);
-    keys.forEach((key) => {
-      log("Updating " + key + " to " + data[key]);
-      localStorage.setItem(key, escape(data[key]));
-      updateDom(key, data[key]);
+addSort("events", (a, b) => {
+  const timeA = parseInt(a.time.replaceAll(":", ""));
+  const timeB = parseInt(b.time.replaceAll(":", ""));
+  const result = timeA > timeB ? 1 : timeA < timeB ? -1 : 0;
+  return result;
+});
+
+addClickFunction("undo", (e) => {
+  const row = getRow(e);
+  if (!row) {
+    return;
+  }
+  toggleClass("events", row, "crossout");
+});
+
+let watertower;
+let connectionPoll;
+const connect = async (e) => {
+  try {
+    watertower = await watertowerConnect();
+    showHideSwap("connected");
+    console.log("Connected at last!");
+    clearInterval(connectionPoll);
+  } catch (er) {
+    console.error("Connection failed");
+    console.error(er);
+  }
+};
+
+try {
+  watertower = await watertowerConnect();
+  showHideSwap("connected");
+  console.log("Connected!");
+} catch (er) {
+  console.error("First Connection failed");
+  console.error(er);
+  connectionPoll = setInterval(connect, 30000);
+}
+
+const tellUser = (m) => {
+  console.log(m);
+};
+window.addEventListener("watertower-message", tellUser);
+
+addClickFunction("login", async (e) => {
+  const u = getByName("u");
+  const p = getByName("password");
+  watertower.login(u, p);
+  showHideSwap("connected");
+});
+
+export const reset = () => {
+  clearTable("events");
+  setByName("mins", "00");
+  setByName("secs", "00");
+  setByName("oppenentName", "");
+  setByName("opponentScore", "0");
+  setByName("score", "0");
+  zeroPlayersScores();
+};
+
+const zeroPlayersScores = (pos = 1) => {
+  if (pos > 22) {
+    zeroOthers();
+    return;
+  }
+  zeroPlayerScore("pos-" + pos);
+  zeroPlayersScores(pos + 1);
+};
+
+const zeroPlayerScore = (label) => {
+  const name = getByName(label);
+  if (!name) {
+    return;
+  }
+  const scorer = name + "-scored";
+  setByName(scorer, 0);
+};
+
+const zeroOthers = () => {
+  zeroPlayerScore("pos-goal");
+  clearBench();
+};
+
+const clearBench = (pos = 1) => {
+  if (pos > 5) {
+    return;
+  }
+  zeroPlayerScore("pos-bench-" + pos);
+  clearBench(pos + 1);
+};
+
+addClickFunction("send", async (e) => {
+  const row = getRow(e);
+  if (!row) {
+    return;
+  }
+  const title = "Footswell";
+  const text = document.getElementById("events-details-" + row).innerText;
+  const url = window.location.href;
+  //  you could..... const number = telephoneNumber;
+
+  if (!navigator.share) {
+    console.error("web share not supported");
+    return;
+  }
+
+  try {
+    await navigator.share({
+      title,
+      text,
+      url,
     });
-    timeline(data.__UUID);
-  });
-  ws.addEventListener("open", listener);
-};
-
-let max = 0;
-const timeline = (maxString) => {
-  const newMax = parseInt(maxString);
-  if (newMax > max) {
-    max = newMax;
+    console.log("Thanks for sharing!");
+  } catch (err) {
+    console.log(`Couldn't share because of`, err.message);
   }
-  const data = document.getElementById("data");
-  const oldline = document.getElementById("timeline");
-  const timelineDiv = oldline ? oldline : document.createElement("DIV");
-  timelineDiv.innerHTML = "";
-  timelineDiv.setAttribute("id", "timeline");
-  for (let x = 0; x < max; x++) {
-    const time = document.createElement("BUTTON");
-    time.innerHTML = "" + x;
-    time.setAttribute("id", "time-" + x);
-    time.addEventListener("click", (event) => {
-      load(x);
-    });
-    timelineDiv.appendChild(time);
-  }
-  data.appendChild(timelineDiv);
-};
+  /** 
+    
+   Straight to WhatsApp?
 
-const escape = (value) => {
-  if (!value) {
-    return "";
-  }
-  if (value == "undefined") {
-    return "";
-  }
-  if (value == "null") {
-    return "";
-  }
-  return value;
-};
-
-const updateDom = (key, value) => {
-  const element = document.getElementById(key);
-  const input = (element) ? element : create(key, value);
-  input.value = escape(value);
-};
-
-const create = (key) => {
-  const data = document.getElementById("data");
-  const input = document.createElement("INPUT");
-  input.setAttribute("type", "text");
-  input.setAttribute("id", key);
-  input.setAttribute("placeholder", key);
-  input.addEventListener("change", (event) => {
-    const el = event.target;
-    window.localStorage.setItem(el.id, el.value);
-    store();
-  });
-  const lab = document.createElement("LABEL");
-  lab.innerHTML = key + ": ";
-  lab.setAttribute("id", "lab=" + key);
-  const del = document.createElement("BUTTON");
-  del.innerHTML = "X";
-  del.setAttribute("id", "del-" + key);
-  del.addEventListener("click", (event) => {
-    const el = event.target;
-    window.localStorage.removeItem(key);
-    data.removeChild(input);
-    data.removeChild(del);
-    data.removeChild(lab);
-  });
-  data.appendChild(lab);
-  data.appendChild(input);
-  data.appendChild(del);
-
-  return input;
-};
-
-export { connect, load, login, store };
+    const  message =  encodeURIComponent(yourMessage);
+    
+    console.log("https://api.whatsapp.com/send?phone=" + number + "&text=%20" + message);
+    return fetch("https://api.whatsapp.com/send?phone=" + number + "&text=%20" + message);
+  
+  */
+});
