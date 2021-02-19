@@ -52,7 +52,7 @@ const process = async (req: any, storeConnection: Function) => {
       );
       return;
     }
-    log("200 (no headers)::" + req.url);
+    log("200::" + req.url + " (no headers)");
     req.respond(
       { status: 200, body: file },
     );
@@ -64,9 +64,9 @@ const process = async (req: any, storeConnection: Function) => {
   }
 };
 
-const eventLoop = async () => {
+export const eventLoop = async () => {
   const settings = await getSettings();
-  const port = settings.port ? settings.port : 3000;
+  const port = settings.port ? settings.port : 4444;
   const store = await SetupDatabase(settings);
   const storeConnection = SetupWebsocket(store);
 
@@ -77,8 +77,8 @@ const eventLoop = async () => {
     process(req, storeConnection);
   }
 };
-log("Args:: "+Deno.args);
-if (Deno.args.indexOf("setup") == -1){
+log("Args:: " + Deno.args);
+if (Deno.args.indexOf("setup") == -1) {
   eventLoop();
 } else {
   log("Just setting up");

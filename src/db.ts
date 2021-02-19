@@ -1,7 +1,7 @@
 import { Client } from "https://deno.land/x/postgres/mod.ts";
 
 import type { Store } from "./watertower.d.ts";
-import { error, log } from "../log.js";
+import { error, log } from "./log.js";
 
 const connect = async (settings: any) => {
   const client = new Client({
@@ -23,7 +23,7 @@ const init = async (
   adminUser: Function,
   tablename: String,
 ) => {
-  const createStore = await client.query(
+  const createStore = await client.queryObject(
     `CREATE TABLE IF NOT EXISTS ${tablename} (
     id SERIAL PRIMARY KEY,
     timestamp timestamp default current_timestamp, 
@@ -31,27 +31,31 @@ const init = async (
     data JSON NOT NULL)
 `,
   );
-  const resultStore = await client.query(`select * from ${tablename}`);
+  const resultStore = await client.queryArray(`select * from ${tablename}`);
   log(resultStore.rows);
-  const createUser = await client.query(`CREATE TABLE IF NOT EXISTS users (
+  const createUser = await client.queryObject(
+    `CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     userID VARCHAR (200) NOT NULL UNIQUE,
     p TEXT NOT NULL)
-`);
-  const resultUsers = await client.query("select * from users");
+`,
+  );
+  const resultUsers = await client.queryArray("select * from users");
   log(resultUsers.rows);
 
-  await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
+  await client.queryObject(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
 
-  const createRoles = await client.query(`CREATE TABLE IF NOT EXISTS roles (
+  const createRoles = await client.queryObject(
+    `CREATE TABLE IF NOT EXISTS roles (
     id SERIAL PRIMARY KEY,
     userID INT,
     ROLE TEXT NOT NULL,
     CONSTRAINT "user_constraint" FOREIGN KEY (userID) REFERENCES users (id)
     ON DELETE CASCADE
   )
-`);
-  const resultRoles = await client.query("select * from roles");
+`,
+  );
+  const resultRoles = await client.queryArray("select * from roles");
   log(resultRoles.rows);
 
   if (!settings.admin || !settings.admin.id || !settings.admin.p) {
@@ -61,7 +65,7 @@ const init = async (
   const valid = await validUser(settings.admin.id, settings.admin.p);
   const allGood = (!valid) ? false : await adminUser(valid);
   if (allGood) {
-    log(" Admin exists " + settings.admin.id);
+    log(" No need to generate, admin exists " + settings.admin.id);
     return;
   }
   await saveUser(settings.admin.id, settings.admin.p);
@@ -73,8 +77,15 @@ const loadSetup = (client: Client, tablename: String) =>
   async (id: number) => {
     const sql = `select data from ${tablename} where id = ${id}`;
     try {
-      const select = await client.query(sql);
-      const data = select.rows[0][0];
+      const select = await client.queryArray(sql);
+      if (
+        !select || !select.rows || !select.rows[0] || select.rows[0][0] == null
+      ) {
+        log("Returning empty");
+        return { __UUID: 0 };
+      }
+
+      const data = <any> select.rows[0][0];
       data.__UUID = id;
       return data;
     } catch (err) {
@@ -90,12 +101,12 @@ const validUserSetup = (client: Client) =>
    WHERE userID = '${id}' 
      AND p = crypt('${p}', p);`;
     try {
-      const select = await client.query(sql);
+      const select = await client.queryArray(sql);
       const valid = select.rowCount === 1;
       if (!valid) {
         return false;
       }
-      return select.rows[0][0];
+      return <number> select.rows[0][0];
     } catch (err) {
       error(err);
       error(sql);
@@ -110,12 +121,12 @@ const adminUserSetup = (client: Client) =>
    WHERE userID = '${id}' 
      AND role = 'admin'`;
     try {
-      const select = await client.query(sql);
+      const select = await client.queryArray(sql);
       const valid = select.rowCount === 1;
       if (!valid) {
         return false;
       }
-      return select.rows[0][0];
+      return <number> select.rows[0][0];
     } catch (err) {
       error(err);
       error(sql);
@@ -125,7 +136,12 @@ const adminUserSetup = (client: Client) =>
 
 const currentIDSetup = (client: Client, tablename: String) =>
   async () => {
-    const newID = await client.query(`select max(id) from ${tablename}`);
+    const newID = await client.queryArray(`select max(id) from ${tablename}`);
+    log(newID);
+    if (!newID || !newID.rows || !newID.rows[0] || newID.rows[0][0] == null) {
+      log("Returning zero");
+      return 0;
+    }
     return newID.rows[0][0];
   };
 
@@ -135,7 +151,7 @@ const saveSetup = (client: Client, currentID: Function, tablename = "store") =>
     const sql =
       `insert into ${tablename} (inserted_by,data) values ('${userID}','${dataString}')`;
     try {
-      const insert = await client.query(sql);
+      const insert = await client.queryObject(sql);
       log(userID + " inserted " + dataString);
       return currentID();
     } catch (err) {
@@ -147,7 +163,7 @@ const saveSetup = (client: Client, currentID: Function, tablename = "store") =>
 const saveAdmin = async (client: Client, userID: string) => {
   const sql = `insert into roles (userID,role) values ('${userID}','admin')`;
   try {
-    const insert = await client.query(sql);
+    const insert = await client.queryObject(sql);
     log(userID + " has admin roll");
   } catch (err) {
     error(err);
@@ -162,7 +178,7 @@ const saveUserSetup = (client: Client) =>
       crypt('${p}', gen_salt('bf'))
     )`;
     try {
-      const insert = await client.query(sql);
+      const insert = await client.queryObject(sql);
       log(u + " user inserted ");
     } catch (err) {
       error(err);

@@ -1,13 +1,14 @@
-FROM ubuntu:focal
+FROM ubuntu:bionic
 
 ENV DEBIAN_FRONTEND=noninteractive
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
+RUN apt-get -y upgrade
 RUN apt-get -y install wget curl gnupg2 unzip
 
 #RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt focal-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt bionic-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN apt-get update
 
@@ -33,7 +34,7 @@ RUN printenv | grep POST
 RUN echo $POSTGRES_PASSWORD
 RUN echo "env shown"    
 
-RUN apt-get -y install postgresql 
+RUN apt-get -y install postgresql-13 postgresql
 
 RUN curl -fsSL https://deno.land/x/install/install.sh | sh && mv /root/.deno/bin/deno /bin/deno
 

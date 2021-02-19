@@ -1,1 +1,1 @@
-docker run -p 4444:3000 footswell:$1
+docker run -p 4444:4444 footswell:$1

@@ -1,10 +1,4 @@
-import {
-  addClickFunction,
-  getByName,
-  setByName,
-  tools,
-  watertowerConnect,
-} from "./dist/binder.js";
+import { addClickFunction, getByName, setByName } from "./dist/binder.js";
 import {
   addRow,
   addSort,
@@ -12,15 +6,17 @@ import {
   toggleClass,
 } from "./dist/plugins/tablePlugin.js";
 
-import { showHideSwap } from "./dist/plugins/showhidePlugin.js";
 import { positionIds } from "./posrow.js";
 import { benchIds } from "./posbench.js";
 import { goalieIds } from "./posgoal.js";
 import "./formationedit.js";
 import "./teamnames.js";
 import "./eventslist.js";
+import { connect } from "./connect.js";
 
 let mode = "edit"; // two modes 'edit' or 'display'
+
+connect();
 
 // Register a function for toggleEdit to use with "click" in mark up
 addClickFunction("toggleEdit", (e) => {
@@ -125,42 +121,6 @@ addClickFunction("undo", (e) => {
     return;
   }
   toggleClass("events", row, "crossout");
-});
-
-let watertower;
-let connectionPoll;
-const connect = async (e) => {
-  try {
-    watertower = await watertowerConnect();
-    showHideSwap("connected");
-    console.log("Connected at last!");
-    clearInterval(connectionPoll);
-  } catch (er) {
-    console.error("Connection failed");
-    console.error(er);
-  }
-};
-
-try {
-  watertower = await watertowerConnect();
-  showHideSwap("connected");
-  console.log("Connected!");
-} catch (er) {
-  console.error("First Connection failed");
-  console.error(er);
-  connectionPoll = setInterval(connect, 30000);
-}
-
-const tellUser = (m) => {
-  console.log(m);
-};
-window.addEventListener("watertower-message", tellUser);
-
-addClickFunction("login", async (e) => {
-  const u = getByName("u");
-  const p = getByName("password");
-  watertower.login(u, p);
-  showHideSwap("connected");
 });
 
 export const reset = () => {

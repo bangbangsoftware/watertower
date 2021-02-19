@@ -1,3 +1,5 @@
+cd $(dirname $0)
+cd ../src
 echo 'pg starting'
 service postgresql start
 while ! pg_isready 
@@ -6,6 +8,6 @@ do
     echo "`pg_isready`"
     sleep 10 
 done
-runuser -l postgres -c 'psql < /init.sql'
+#runuser -l postgres -c 'psql < /init.sql'
 
 deno run --allow-net --allow-read main.ts

@@ -31,7 +31,13 @@ const socks = new Map<string, Wsc>();
 
 const sendReply = (id: string, reply: Reply, logError = false) => {
   if (logError) {
-    error(reply.message);
+    const obj = {
+      state: reply.state,
+      message: reply.message,
+      action: reply.action,
+      data: "...",
+    };
+    error("ERROR", obj);
   }
   const wsc = socks.get(id);
   if (!wsc) {
@@ -42,7 +48,6 @@ const sendReply = (id: string, reply: Reply, logError = false) => {
 };
 
 const logon = async (id: string, data: any, store: Store): Promise<boolean> => {
-  log(data);
   const wsc = socks.get(id);
   if (!wsc) {
     error(id + " is unknown, logon");
@@ -52,7 +57,7 @@ const logon = async (id: string, data: any, store: Store): Promise<boolean> => {
   const valid = await store.validUser(data.id, data.p);
   const allGood = (!valid) ? false : await store.adminUser(valid);
   if (allGood) {
-    log(" Admin exists " + id);
+    log("Admin now logged on " + id);
     wsc.canWrite = true;
     socks.set(id, wsc);
     const reply = {
@@ -90,6 +95,10 @@ const inSequence = async (
 ): Promise<boolean> => {
   // is it out of sequence...
   const currentID = await store.currentID();
+  if (currentID == null) {
+    log("currentID is null, so assume this is the first insert");
+    return true;
+  }
   if (uuid == currentID) {
     return true;
   }
@@ -98,7 +107,7 @@ const inSequence = async (
   // Maybe should try and merge...?
   const currentData = await store.load(currentID);
   const reply = {
-    state: 400,
+    state: 409,
     message: err,
     action: "update",
     data: currentData,
@@ -134,27 +143,29 @@ const update = async (id: string, data: any, store: Store) => {
     return;
   }
   const canWrite = hasWritePermissions(id, wsc);
-  log("Can write:" + canWrite);
   if (!canWrite) {
+    error("Can't write!");
     return;
   }
+  log("Can write - tick");
 
   const wrongSequence = await outOfSequence(id, data.__UUID, store);
-  log("Wrong Sequence :" + wrongSequence);
   if (wrongSequence) {
+    error("Wrong Sequence!");
     return;
   }
+  log("In Sequence - tick");
 
   const __UUID = await store.save(id, data);
   data.__UUID = __UUID;
-  log(data);
+  log("Updated data " + JSON.stringify(data).length + " to " + data.__UUID);
   const reply = {
     state: 200,
     message: "Updated",
     action: "update",
     data,
   };
-  sendReply(id, reply, true);
+  sendReply(id, reply);
 
   broadcast(id, data);
 };
@@ -200,7 +211,7 @@ const processEvent = async (id: string, ev: any, store: Store) => {
   log(id + " request incoming");
 
   if (isWebSocketCloseEvent(ev)) {
-    error("websocket closed", "" + ev);
+    error("websocket closed", ev);
     socks.delete(id);
     return;
   }
@@ -210,7 +221,12 @@ const processEvent = async (id: string, ev: any, store: Store) => {
   }
   try {
     const message: Message = JSON.parse(ev);
-    log("Request to " + message.action);
+    if (message.action) {
+      log("Request to " + message.action);
+    } else {
+      error("Request has no action ", message);
+    }
+
     if (message.action == "logon") {
       logon(id, message.data, store);
     } else if (message.action == "load") {
@@ -221,7 +237,7 @@ const processEvent = async (id: string, ev: any, store: Store) => {
       const reply = {
         state: 400,
         message: "Request not understood",
-        action: message.action,
+        action: message.action == null ? "error" : message.action,
         data: message,
       };
       sendReply(id, reply, true);

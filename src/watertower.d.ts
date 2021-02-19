@@ -8,4 +8,4 @@ interface Store {
   validUser: Function;
 }
 
-export type { Store };
+export { Store };
