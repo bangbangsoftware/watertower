@@ -24,4 +24,4 @@ fi
 
 echo "pg is going already - $test"
 
-deno run --allow-net --allow-read main.ts
+deno run --allow-env --allow-net --allow-read main.ts

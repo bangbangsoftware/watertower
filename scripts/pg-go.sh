@@ -11,4 +11,4 @@ fi
 
 echo 'pg is going already'
 
-deno run --allow-net index.ts
+deno run --allow-env --allow-net index.ts

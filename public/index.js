@@ -1,4 +1,4 @@
-import { addClickFunction, getByName, setByName } from "./dist/binder.js";
+import { addClickFunction, getByName, setByName, broadcast } from "./dist/binder.js";
 import {
   addRow,
   addSort,
@@ -124,13 +124,14 @@ addClickFunction("undo", (e) => {
 });
 
 export const reset = () => {
-  clearTable("events");
+  const names = clearTable("events");
   setByName("mins", "00");
   setByName("secs", "00");
   setByName("oppenentName", "");
   setByName("opponentScore", "0");
   setByName("score", "0");
   zeroPlayersScores();
+  broadcast();
 };
 
 const zeroPlayersScores = (pos = 1) => {

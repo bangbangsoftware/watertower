@@ -16,7 +16,8 @@ RUN apt-get update
 ENV POSTGRES_USER vscode
 ENV POSTGRES_DB watertower
 ARG POSTGRES_PASSWORD
-ENV POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+#####ENV POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+ENV POSTGRES_PASSWORD=ssTGBJHNVlYY
 
 #RUN openssl rand -base64 14 >> pw 
 ##RUN echo -n "export SET POSTGRES_PASSWORD=" > pw-env
@@ -41,11 +42,14 @@ RUN curl -fsSL https://deno.land/x/install/install.sh | sh && mv /root/.deno/bin
 COPY /src/ .
 # Needs to wget footswell from github
 COPY /public public
-COPY /scripts/goAll.sh .
 COPY /scripts/init.sql .
 COPY .watertower.json .
 RUN sed -i "s/ssTGBJHNVlYY/$POSTGRES_PASSWORD/" init.sql
 RUN sed -i "s/ssTGBJHNVlYY/$POSTGRES_PASSWORD/" .watertower.json
-COPY ./scripts/goTest.sh .
-RUN ./goTest.sh
-CMD ./goAll.sh
+
+COPY ./wt .
+COPY ./scripts/goTestwt.sh .
+COPY ./scripts/goAllwt.sh .
+
+RUN ./goTestwt.sh
+CMD ./goAllwt.sh

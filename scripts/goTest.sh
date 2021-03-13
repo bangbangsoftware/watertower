@@ -9,4 +9,4 @@ done
 runuser -l postgres -c 'psql < /init.sql'
 rm init.sql
 
-deno run --allow-net --allow-read main.ts setup
+deno run --allow-env --allow-net --allow-read main.ts setup

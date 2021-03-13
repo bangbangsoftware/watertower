@@ -259,6 +259,7 @@ const storeConnection = (store: Store) =>
     log("New socket " + id);
 
     for await (const ev of ws) {
+      log(ev);
       processEvent(id, ev, store);
     }
   };

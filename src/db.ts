@@ -4,13 +4,14 @@ import type { Store } from "./watertower.d.ts";
 import { error, log } from "./log.js";
 
 const connect = async (settings: any) => {
-  const client = new Client({
+  const clientSettings = {
     user: settings.db.user,
     password: settings.db.p,
     database: settings.db.db,
     hostname: settings.db.hostname,
     port: settings.db.post,
-  });
+  };
+  const client = new Client(clientSettings);
   await client.connect();
   return client;
 };
@@ -85,7 +86,7 @@ const loadSetup = (client: Client, tablename: String) =>
         return { __UUID: 0 };
       }
 
-      const data = <any> select.rows[0][0];
+      const data = <any>select.rows[0][0];
       data.__UUID = id;
       return data;
     } catch (err) {
@@ -106,7 +107,7 @@ const validUserSetup = (client: Client) =>
       if (!valid) {
         return false;
       }
-      return <number> select.rows[0][0];
+      return <number>select.rows[0][0];
     } catch (err) {
       error(err);
       error(sql);
@@ -126,7 +127,7 @@ const adminUserSetup = (client: Client) =>
       if (!valid) {
         return false;
       }
-      return <number> select.rows[0][0];
+      return <number>select.rows[0][0];
     } catch (err) {
       error(err);
       error(sql);
@@ -140,6 +141,8 @@ const currentIDSetup = (client: Client, tablename: String) =>
     log(newID);
     if (!newID || !newID.rows || !newID.rows[0] || newID.rows[0][0] == null) {
       log("Returning zero");
+      const ids = await client.queryArray(`select id from ${tablename}`);
+      log(ids);
       return 0;
     }
     return newID.rows[0][0];
