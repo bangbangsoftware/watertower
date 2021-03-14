@@ -35,21 +35,21 @@ RUN printenv | grep POST
 RUN echo $POSTGRES_PASSWORD
 RUN echo "env shown"    
 
-RUN apt-get -y install postgresql-13 postgresql
+RUN apt-get -y install postgresql-13 postgresql nodejs npm
 
-RUN curl -fsSL https://deno.land/x/install/install.sh | sh && mv /root/.deno/bin/deno /bin/deno
+#RUN curl -fsSL https://deno.land/x/install/install.sh | sh && mv /root/.deno/bin/deno /bin/deno
 
 COPY /src/ .
 # Needs to wget footswell from github
 COPY /public public
+copy package.json .
 COPY /scripts/init.sql .
 COPY .watertower.json .
 RUN sed -i "s/ssTGBJHNVlYY/$POSTGRES_PASSWORD/" init.sql
 RUN sed -i "s/ssTGBJHNVlYY/$POSTGRES_PASSWORD/" .watertower.json
 
-COPY ./wt .
-COPY ./scripts/goTestwt.sh .
-COPY ./scripts/goAllwt.sh .
-
-RUN ./goTestwt.sh
-CMD ./goAllwt.sh
+COPY ./src/main.js .
+COPY ./scripts/setup-pg.sh .
+RUN npm i
+RUN ./setup-pg.sh
+CMD node main.js

@@ -82,7 +82,9 @@ const process = async (req: any, storeConnection: Function) => {
 
 export const eventLoop = async () => {
   const settings = await getSettings();
-  const port = settings.port ? settings.port : 4444;
+  const portEnv = Deno.env.get("PORT");
+  const portSettings = settings.port ? settings.port : 4444;
+  const port = !portEnv ? portSettings : portEnv;
   const store = await SetupDatabase(settings);
   const storeConnection = SetupWebsocket(store);
   serveListen(storeConnection, port);
