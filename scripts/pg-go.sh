@@ -1,14 +1,15 @@
+service postgresql start
 if [ ! pg_isready ]
   then 
-    sudo service postgresql start
+    service postgresql start
     while ! pg_isready 
     do 
         echo '$(date) - waiting for database to start'
         sleep 10 
     done
-    psql < init.sql 
+    echo 'trying init as `whoami`'
+    psql < /init.sql 
 fi 
-
-echo 'pg is going already'
-
-deno run --allow-env --allow-net index.ts
+echo 'trying init as postgres'
+runuser -l postgres -c 'psql < /init.sql'
+echo 'pg is going'
